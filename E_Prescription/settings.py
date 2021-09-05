@@ -79,23 +79,23 @@ WSGI_APPLICATION = 'E_Prescription.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db2.sqlite3'),
-    }
-}
-
 # DATABASES = {
-# 'default': {
-# 'ENGINE': 'django.db.backends.mysql',
-# 'NAME': 'e_prescription',
-# 'USER': 'admin',
-# 'PASSWORD': 'master123',
-# 'HOST': 'dhruvin-22155-mock.csaruqlxxway.us-east-1.rds.amazonaws.com',
-# 'PORT': '3306',
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': os.path.join(BASE_DIR, 'db2.sqlite3'),
+#     }
 # }
-# }
+
+DATABASES = {
+'default': {
+'ENGINE': 'django.db.backends.mysql',
+'NAME': 'e_prescription',
+'USER': 'admin',
+'PASSWORD': 'master123',
+'HOST': 'dhruvin-22155-mock.csaruqlxxway.us-east-1.rds.amazonaws.com',
+'PORT': '3306',
+}
+}
 
 
 # Password validation
