@@ -241,7 +241,7 @@ body {
   
             <ul id="menu-content" class="menu-content collapse out">
                 <li class="">
-                  <a href="{% url 'dashboard' %}">
+                  {% comment %} <a href="{% url 'dashboard' %}"> {% endcomment %}
                   <i class="fa fa-dashboard fa-lg"></i>Dashboard
                   </a>
                 </li>
@@ -262,20 +262,20 @@ body {
                 </li>
                 </a>
 
-                <a href="{% url 'viewOrder' %}">
+               {% comment %}  <a href="{% url 'viewOrder' %}">
                   <li  data-toggle="collapse" data-target="#products" class="collapsed active">
                   <i class="fa fa-user fa-lg"></i> View Order
                 </li>
-                </a>
+                </a> {% endcomment %}
 
 
 
 
-                <a href="{% url 'soldMedicines' %}">
+                {% comment %} <a href="{% url 'soldMedicines' %}">
                   <li data-toggle="collapse" data-target="#service" class="collapsed">
                   <i class="fa fa-user fa-lg"></i> Sold Medicine
                 </li>
-                </a>
+                </a> {% endcomment %}
                
                  
             </ul>

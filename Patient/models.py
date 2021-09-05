@@ -1,7 +1,7 @@
 from django.db import models
 from Doctor.models import Doctor
 from Company.models import Medicine
-
+from django import forms
 
 # Create your models here.
 
