@@ -509,7 +509,7 @@ body {
       $.ajax({
         url: "getPrescriptionMedicineOnId",
         type: "GET",
-        async: false,
+        async: true,
         data: {
           prescriptionId: prescriptionId
         },
@@ -526,7 +526,7 @@ body {
             $.ajax({
               url: "getPrescriptionsOnId",
               type: "GET",
-              async: false,
+              async: true,
               data:{
                 
               },
