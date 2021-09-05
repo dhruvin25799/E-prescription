@@ -426,7 +426,7 @@ body {
       $.ajax({
         url: "getPatientNameOnId",
         type: "GET",
-        async: false,
+        async: true,
         data:{
           
         },
@@ -446,7 +446,7 @@ body {
       $.ajax({
         url: "getDoctorNameOnId",
         type: "GET",
-        async: false,
+        async: true,
         data:{
           doctorId: doctorId
         },
@@ -466,7 +466,7 @@ body {
       $.ajax({
         url: "getMedicineOnId",
         type: "GET",
-        async: false,
+        async: true,
         data:{
           medicineId: medicineId
         },
