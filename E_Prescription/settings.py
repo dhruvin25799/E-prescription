@@ -92,7 +92,7 @@ DATABASES = {
 'NAME': 'mydb',
 'USER': 'admin',
 'PASSWORD': 'master123',
-'HOST': 'mydbinstance57.csaruqlxxway.us-east-1.rds.amazonaws.com',
+'HOST': 'mydbinstance157.csaruqlxxway.us-east-1.rds.amazonaws.com',
 'PORT': '3306',
 }
 }
