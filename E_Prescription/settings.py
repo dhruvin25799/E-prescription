@@ -89,10 +89,10 @@ WSGI_APPLICATION = 'E_Prescription.wsgi.application'
 DATABASES = {
 'default': {
 'ENGINE': 'django.db.backends.mysql',
-'NAME': 'e_prescription',
-'USER': 'admin',
+'NAME': 'mydb',
+'USER': 'ADMIN',
 'PASSWORD': 'master123',
-'HOST': 'dhruvin-22155-mock.csaruqlxxway.us-east-1.rds.amazonaws.com',
+'HOST': 'mydbinstance157.csaruqlxxway.us-east-1.rds.amazonaws.com',
 'PORT': '3306',
 }
 }
