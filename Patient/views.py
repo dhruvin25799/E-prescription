@@ -33,7 +33,7 @@ def getPrescriptionReportPage(request):
 def getPrescriptionsOnId(request):
     if request.method=="GET":
         patientId = request.session.get('id')
-        prescriptions = Prescription.objects.raw("select prescriptionId from patient_prescription inner join patient_patient on patient_patient.patientId=patient_prescription.prescriptionPatient_Id where patientId='"+str(patientId)+"'")
+        prescriptions = Prescription.objects.raw("select prescriptionId from Patient_prescription inner join Patient_patient on Patient_patient.patientId=Patient_prescription.prescriptionPatient_Id where patientId='"+str(patientId)+"'")
         for pre in prescriptions:
             print(pre.prescriptionId)
         priscriptionJson = serializers.serialize("json",prescriptions)

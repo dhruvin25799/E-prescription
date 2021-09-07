@@ -181,7 +181,7 @@ def getPrescriptionsOnPhoneNumber(request):
         phoneNumber = request.GET['phoneNumber']
         #patients = Patient.objects.get(patientPhoneNumber=phoneNumber)
 
-        prescriptions = Prescription.objects.raw("select prescriptionId from patient_prescription inner join patient_patient on patient_patient.patientId=patient_prescription.prescriptionPatient_Id where patientPhoneNumber='"+phoneNumber+"'")
+        prescriptions = Prescription.objects.raw("select prescriptionId from Patient_prescription inner join Patient_patient on Patient_patient.patientId=Patient_prescription.prescriptionPatient_Id where patientPhoneNumber='"+phoneNumber+"'")
         
         for pre in prescriptions:
             print(pre.prescriptionId)
