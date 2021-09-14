@@ -1,0 +1,1265 @@
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'The target of this portal is to make a web application that helps its user to keep track of his medication.
+It consists of three entities namely doctor, patient, and the drug manufacturer.
+Doctors can electronically prescribe and manage prescriptions to their patients and patients
+can view all their existing prescriptions just by accessing the web. This portal allows the
+companies to add the details about the drug that they are manufacturing'
+
+################ Parameter ####################
+Parameters:
+  # iamrole:
+  #   Description: IAM ROLE for instances
+  #   Type: AWS::IAM::Role
+  #   Default: "PE-Training-2021"
+  #   ConstraintDescription: must be the name of an existing iam role.
+
+  KeyName:
+    Description: The EC2 Key Pair to allow SSH access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: "mock-project-group1"
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+
+  tagName:
+    Type: String
+    Default: 'pe-g1' # modify for each res
+    Description: 'Value for Name tag'
+
+  tagCreatorGroup:
+    Type: String
+    Default: 'pe-g1'
+    Description: 'Value for creatorGroup tag'
+
+  tagProject:
+    Type: String
+    Default: 'PE-TRAINING'
+    Description: 'Value for Project tag'
+
+  tagEmail:
+    Type: String
+    Default: 'any@quantiphi.com'
+    Description: 'Value for Email tag'
+
+  DBInstanceID:
+    Default: mydbinstance
+    Description: My database instance
+    Type: String
+    MinLength: '1'
+    MaxLength: '63'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: >-
+      Must begin with a letter and must not end with a hyphen or contain two
+      consecutive hyphens.
+
+  DBName:
+    Default: mydb
+    Description: My database
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters.
+
+  DBInstanceClass:
+    Default: db.m5.large
+    Description: DB instance class
+    Type: String
+    ConstraintDescription: Must select a valid DB instance type.
+    #AllowedValues: [ db.m5.large ,db.t1.micro, db.m1.small, db.m1.medium, db.m1.large, db.m1.xlarge,db.m2.xlarge, db.m2.2xlarge, db.m2.4xlarge, db.m3.medium, db.m3.large, db.m3.xlarge, db.m3.2xlarge, db.m4.large, db.m4.xlarge, db.m4.2xlarge, db.m4.4xlarge, db.m4.10xlarge, db.r3.large, db.r3.xlarge, db.r3.2xlarge, db.r3.4xlarge, db.r3.8xlarge, db.m2.xlarge, db.m2.2xlarge, db.m2.4xlarge, db.cr1.8xlarge, db.t2.micro, db.t2.small, db.t2.medium, db.t2.large]
+
+  DBAllocatedStorage:
+    Default: '50'
+    Description: The size of the database (GiB)
+    Type: Number
+    MinValue: '20'
+    MaxValue: '65536'
+    ConstraintDescription: must be between 20 and 65536 GiB.
+
+  DBUsername:
+    NoEcho: 'true'
+    Description: Username for MySQL database access
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+
+  DBPassword:
+    NoEcho: 'true'
+    Description: Password MySQL database access
+    Type: String
+    MinLength: '8'
+    MaxLength: '41'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: must contain only alphanumeric characters.
+
+  MultiAZ:
+    Description: Multi-AZ master database
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    ConstraintDescription: must be true or false.
+
+################ Mappings ####################
+Mappings:
+
+  CIDR :
+    VPC :
+      Range : "10.0.0.0/20"
+    PublicSubnet1 :
+      Range : "10.0.0.0/24"
+    PrivateSubnet1 :
+      Range : "10.0.1.0/24"
+    PublicSubnet2 :
+      Range : "10.0.3.0/24"
+    PrivateSubnet2 :
+      Range : "10.0.2.0/24"
+
+
+  AWSInstanceType2Arch:
+    t2.micro:
+      Arch: HVM64
+    t3.medium:
+      Arch: HVM64
+
+  AWSRegionArch2AMI:
+    us-east-1:
+      HVM64: ami-09e67e426f25ce0d7
+
+################ Resources ####################
+Resources:
+
+  ################ VPC ####################
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !FindInMap
+        - CIDR
+        - VPC
+        - Range
+      Tags:
+        -
+          Key: "Name"
+          Value: "mock-proj-g1"
+        -
+          Key: "Email"
+          Value: "any@quantiphi.com"
+        -
+          Key: "Project"
+          Value: "PE-TRAINING"
+
+  ################ Public subnet 1 ####################
+  PublicSubnet1 :
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs:
+              Ref : "AWS::Region"
+      CidrBlock: !FindInMap
+        - CIDR
+        - PublicSubnet1
+        - Range
+      MapPublicIpOnLaunch: True
+      Tags:
+        -
+          Key: "Name"
+          Value: "group1-PublicSubnet1"
+        -
+          Key: "Email"
+          Value: "any@quantiphi.com"
+        -
+          Key: "Project"
+          Value: "PE-TRAINING"
+
+      VpcId: !Ref VPC
+
+  ################ Private subnet 1 ####################
+  PrivateSubnet1 :
+      Type: AWS::EC2::Subnet
+      Properties:
+        AvailabilityZone:
+          Fn::Select:
+            - 0
+            - Fn::GetAZs:
+                Ref : "AWS::Region"
+        CidrBlock: !FindInMap
+          - CIDR
+          - PrivateSubnet1
+          - Range
+        MapPublicIpOnLaunch: False
+        Tags:
+          -
+            Key: "Name"
+            Value: "GROUP1-PrivateSubnet1"
+          -
+            Key: "Email"
+            Value: "any@quantiphi.com"
+          -
+            Key: "Project"
+            Value: "PE-TRAINING"
+
+        VpcId: !Ref VPC
+
+  ################ Public subnet 2 ####################
+  PublicSubnet2 :
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs:
+              Ref : "AWS::Region"
+      CidrBlock: !FindInMap
+        - CIDR
+        - PublicSubnet2
+        - Range
+      MapPublicIpOnLaunch: True
+      Tags:
+        -
+          Key: "Name"
+          Value: "group1-PublicSubnet2"
+        -
+          Key: "Email"
+          Value: "any@quantiphi.com"
+        -
+          Key: "Project"
+          Value: "PE-TRAINING"
+
+      VpcId: !Ref VPC
+
+  ################ Private subnet 2 ####################
+  PrivateSubnet2 :
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs:
+              Ref : "AWS::Region"
+      CidrBlock: !FindInMap
+        - CIDR
+        - PrivateSubnet2
+        - Range
+
+      MapPublicIpOnLaunch: False
+      Tags:
+        -
+          Key: "Name"
+          Value: "group1PrivateSubnet2"
+        -
+          Key: "Email"
+          Value: "any@quantiphi.com"
+        -
+          Key: "Project"
+          Value: "PE-TRAINING"
+      VpcId: !Ref VPC
+
+
+  Ec2Instance:
+    Type: AWS::EC2::Instance
+    DependsOn: MyDB
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09e67e426f25ce0d7
+      KeyName:
+        Ref: "KeyName"
+      InstanceInitiatedShutdownBehavior: terminate
+      SecurityGroupIds:
+        - Ref: UserInstanceSecurityGroup
+      SubnetId: !Ref PrivateSubnet1
+      UserData:
+        Fn::Base64:
+          Fn::Join:
+          - ''
+          -
+            - "#!/bin/bash \n"
+            - "sudo su \n"
+            - "cd / \n"
+            - "touch logs.log \n"
+            - "apt -y update >>logs.log \n"
+            - "apt -y upgrade >>logs.log \n"
+            - "apt install -y python >>logs.log \n"
+            - "apt install -y python3-pip >>logs.log \n"
+            - "python3 -m pip install --upgrade pip >>logs.log \n"
+            - "pip install django==3.2 >>logs.log \n"
+            - "pip install pymysql >>logs.log \n"
+            - "git clone https://github.com/dhruvin25799/E-prescription.git  >>logs.log \n"
+            - "cd E-prescription >>logs.log \n"
+            - "touch logs.log \n"
+            - "python3 manage.py makemigrations >>logs.log \n"
+            - "python3 manage.py migrate >>logs.log \n"
+            - "python3 manage.py loaddata dump.json >>logs.log \n"
+            - "shutdown -h \n"
+
+
+  ################ DB SUBNET GROUP ####################
+  DBSubnetGroup1:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: 'Subnet group for RDS'
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+
+      Tags:
+        -
+          Key: "Name"
+          Value:  !Ref tagName
+        -
+          Key: "Project"
+          Value: !Ref tagProject # p
+
+        -
+          Key: "Email"
+          Value: !Ref tagEmail # p
+
+  ############################## RDS ##################################################
+  MyDB:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBInstanceIdentifier: !Ref DBInstanceID
+      DBName: !Ref DBName
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: !Ref DBAllocatedStorage
+      Engine: MySQL
+      EngineVersion: 5.7.22
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      DBSubnetGroupName: !Ref DBSubnetGroup1
+      VPCSecurityGroups: [Fn::GetAtt: [ DBInstanceSecurityGroup, GroupId ]]
+      MultiAZ: !Ref 'MultiAZ'
+
+  ReadRepDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      SourceDBInstanceIdentifier: !Ref 'MyDB'
+      DBInstanceClass: !Ref 'DBInstanceClass'
+      Tags:
+      - Key: Name
+        Value: Read Replica Database-g1
+
+  ################ Internet Gateway ####################
+  InternetGateway :
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        -
+          Key: "Name"
+          Value: "group1IG"
+        -
+          Key: "Email"
+          Value: "any@quantiphi.com"
+        -
+          Key: "Project"
+          Value: "PE-TRAINING"
+
+  ################ Internet Gateway Attachment ####################
+  InternetGatewayAttachment :
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: VPC
+      InternetGatewayId:
+        Ref: InternetGateway
+
+  ############################VPC ROUTE TABLE########################
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  InternetRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  ################ Elastic IP for NAT 1 ####################
+  EIP1:
+    DependsOn: InternetGatewayAttachment
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  ################ Elastic IP for NAT 2 ####################
+  EIP2:
+    DependsOn: InternetGatewayAttachment
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  ################ NAT gateway for private subnet 1 ####################
+  NAT1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - EIP1
+          - AllocationId
+      SubnetId:
+        Ref: PublicSubnet1
+      Tags:
+        -
+          Key: "Name"
+          Value: "group1-NAT1"
+        -
+          Key: "Email"
+          Value: "any@quantiphi.com"
+        -
+          Key: "Project"
+          Value: "PE-TRAINING"
+
+  ################ NAT gateway for private subnet 2 ####################
+  NAT2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - EIP2
+          - AllocationId
+      SubnetId:
+        Ref: PublicSubnet2
+      Tags:
+        -
+          Key: "Name"
+          Value: "group1-NAT2"
+        -
+          Key: "Email"
+          Value: "any@quantiphi.com"
+        -
+          Key: "Project"
+          Value: "PE-TRAINING"
+
+  ################ Route Table for Private Subnet 1 ####################
+  PrivateRoutetable1 :
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        -
+          Key: "Name"
+          Value: "group1-PriRT1"
+        -
+          Key: "Email"
+          Value: "any@quantiphi.com"
+        -
+          Key: "Project"
+          Value: "PE-TRAINING"
+
+  ################ Route Table for Private Subnet 2 ####################
+  PrivateRoutetable2 :
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        -
+          Key: "Name"
+          Value: "group1-PriRT2"
+        -
+          Key: "Email"
+          Value: "any@quantiphi.com"
+        -
+          Key: "Project"
+          Value: "PE-TRAINING"
+
+  ################ Route table association of Private Subnet 1 ####################
+  PrivateSubnetRouteTableAssociation1 :
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateRoutetable1
+      SubnetId:
+        Ref: PrivateSubnet1
+
+  ################ Route table association of Private Subnet 2 ####################
+  PrivateSubnetRouteTableAssociation2 :
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateRoutetable2
+      SubnetId:
+        Ref: PrivateSubnet2
+
+  ################ Attaching Private Route table 1 to NAT Gateway ####################
+  RouteToNAT1:
+   Type: AWS::EC2::Route
+   Properties:
+      RouteTableId:
+         Ref: PrivateRoutetable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+         Ref: NAT1
+
+  ################ Attaching Private Route table 2 to NAT Gateway ####################
+  RouteToNAT2:
+   Type: AWS::EC2::Route
+   Properties:
+      RouteTableId:
+         Ref: PrivateRoutetable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+         Ref: NAT2
+
+ ############################## NACL1 ##################################################
+  NACL1 :
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      Tags:
+        -
+          Key: "Name"
+          Value: "group1-NACL1"
+        -
+          Key: "Email"
+          Value: "any@quantiphi.com"
+        -
+          Key: "Project"
+          Value: "PE-TRAINING"
+
+      VpcId: !Ref VPC
+
+  publicSubnet1NAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet1
+      NetworkAclId:
+        Ref: NACL1
+
+  publicSubnet2NAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet2
+      NetworkAclId:
+        Ref: NACL1
+
+  ##########################Recommended NACLs#######################################
+  ##########################Recommended INGRESS NACLs##############################
+  PublicNACLIngressEntry20:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "10.0.0.0/20"
+      Egress: False
+      NetworkAclId: !Ref NACL1
+      PortRange:
+          From: 3306
+          To: 3306
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 20
+
+  PublicNACLIngressEntry100:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: False
+      NetworkAclId: !Ref NACL1
+      PortRange:
+          From: 443
+          To: 443
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 100
+
+  PublicNACLIngressEntry110:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: False
+      NetworkAclId: !Ref NACL1
+      PortRange:
+          From: 80
+          To: 80
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 110
+
+  PublicNACLIngressEntry120:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0" #SHOULD BE CIDER RANGE WITHIN VPC
+      Egress: False
+      NetworkAclId: !Ref NACL1
+      PortRange:
+          From: 22
+          To: 22
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 120
+
+  PublicNACLIngressEntry130:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: False
+      NetworkAclId: !Ref NACL1
+      PortRange:
+          From: 1024
+          To:  65535
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 130
+
+  ###########################Recommended EGRESS NACLs##############################
+  PublicNACLeEgressEntry100:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: True
+      NetworkAclId: !Ref NACL1
+      PortRange:
+          From: 80
+          To:  80
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 100
+
+  PublicNACLEgressEntry110:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: True
+      NetworkAclId: !Ref NACL1
+      PortRange:
+          From: 443
+          To:  443
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 110
+
+  PublicNACLEgressEntry120:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: True
+      NetworkAclId: !Ref NACL1
+      PortRange:
+          From: 32768
+          To:  65535
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 120
+
+  PublicNACLEgressEntry130:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: True
+      NetworkAclId: !Ref NACL1
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 130
+
+  PublicNACLEgressEntry140:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: True
+      NetworkAclId: !Ref NACL1
+      PortRange:
+          From: 22
+          To:  22
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 140
+
+  ############################## NACL1 ##################################################
+
+  NACL2 :
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      Tags:
+        -
+          Key: "Name"
+          Value: "group1-NACL2"
+        -
+          Key: "Email"
+          Value: "any@quantiphi.com"
+        -
+          Key: "Project"
+          Value: "PE-TRAINING"
+
+      VpcId: !Ref VPC
+
+  privateSubnet1NAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet1
+      NetworkAclId:
+        Ref: NACL2
+
+  privateSubnet2NAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet2
+      NetworkAclId:
+        Ref: NACL2
+
+  ##########################Recommended INGRESS NACLs##############################
+
+  PrivateNACLIngressEntry100:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: False
+      NetworkAclId: !Ref NACL2
+      PortRange:
+          From: 443
+          To: 443
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 100
+
+  PrivateNACLIngressEntry110:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: False
+      NetworkAclId: !Ref NACL2
+      PortRange:
+          From: 80
+          To: 80
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 110
+
+  PrivateNACLIngressEntry120:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0" #SHOULD BE CIDER RANGE WITHIN VPC
+      Egress: False
+      NetworkAclId: !Ref NACL2
+      PortRange:
+          From: 22
+          To: 22
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 120
+
+  PrivateNACLIngressEntry130:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: False
+      NetworkAclId: !Ref NACL2
+      PortRange:
+          From: 1024
+          To:  65535
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 130
+
+  PrivateNACLIngressEntry80:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "10.0.0.0/20"
+      Egress: False
+      NetworkAclId: !Ref NACL2
+      PortRange:
+          From: 3306
+          To: 3306
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 80
+
+  # 3306 with public subnets for testing purpose
+  PrivateNACLIngressEntry70:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "10.0.0.0/20"
+      Egress: False
+      NetworkAclId: !Ref NACL2
+      PortRange:
+          From: 3306
+          To: 3306
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 70
+  ###########################Recommended EGRESS NACLs##############################
+
+  PrivateNACLEgressEntry600:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: True
+      NetworkAclId: !Ref NACL2
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 600
+
+  PrivateNACLEgressEntry100:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: True
+      NetworkAclId: !Ref NACL2
+      PortRange:
+          From: 80
+          To:  80
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 100
+
+  PrivateNACLEgressEntry110:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: True
+      NetworkAclId: !Ref NACL2
+      PortRange:
+          From: 443
+          To:  443
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 110
+
+  PrivateNACLEgressEntry120:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: True
+      NetworkAclId: !Ref NACL2
+      PortRange:
+          From: 1024
+          To:  65535
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 120
+
+  PrivateNACLEgressEntry130:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: True
+      NetworkAclId: !Ref NACL2
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 130
+
+  PrivateNACLEgressEntry140:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: "0.0.0.0/0"
+      Egress: True
+      NetworkAclId: !Ref NACL2
+      PortRange:
+          From: 22
+          To:  22
+      Protocol: 6
+      RuleAction: allow
+      RuleNumber: 140
+
+  ################ Launch template ####################
+  LaunchTemplateG1:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: "lt-g1"
+      LaunchTemplateData:
+        IamInstanceProfile:
+          Arn: "arn:aws:iam::488599217855:instance-profile/PE-Training-2021"
+          #Name:  "PE-Training-2021"
+        DisableApiTermination: true
+        ImageId: ami-09e67e426f25ce0d7
+        InstanceType: t2.micro
+        KeyName: !Ref KeyName
+        SecurityGroupIds:
+          - Ref: UserInstanceSecurityGroup
+
+        UserData:
+          Fn::Base64:
+            Fn::Join:
+            - ''
+            -
+              - "#!/bin/bash \n"
+              - "sudo su \n"
+              - "cd / \n"
+              - "touch logs.log \n"
+              - "apt -y update >>logs.log \n"
+              - "apt -y upgrade >>logs.log \n"
+              - "apt install -y python >>logs.log \n"
+              - "apt install -y python3-pip >>logs.log \n"
+              - "python3 -m pip install --upgrade pip >>logs.log \n"
+              - "pip install django==3.2 >>logs.log \n"
+              - "pip install pymysql >>logs.log \n"
+              - "git clone https://github.com/dhruvin25799/E-prescription.git  >>logs.log \n"
+              - "cd E-prescription >>logs.log \n"
+              - "touch logs.log \n"
+              - "python3 manage.py makemigrations >>logs.log \n"
+              - "python3 manage.py migrate >>logs.log \n"
+              - "python3 manage.py runserver 0:80 >>logs.log \n"
+
+  ################ Autoscaling Group ####################
+  WebServerGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: MyDB
+    Properties:
+    #  PropagateAtLaunch : True
+      AvailabilityZones:
+        - Fn::Select:
+          - 1
+          - Fn::GetAZs:
+              Ref : "AWS::Region"
+        - Fn::Select:
+          - 0
+          - Fn::GetAZs:
+              Ref : "AWS::Region"
+
+      LaunchTemplate:
+         LaunchTemplateName: "lt-g1"
+         Version: !GetAtt LaunchTemplateG1.LatestVersionNumber
+
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      MinSize: 1
+      MaxSize: 3
+
+      LoadBalancerNames:
+        - !Ref ElasticLoadBalancer
+      Tags:
+      -
+        Key: "Name"
+        PropagateAtLaunch : True
+        Value:
+          Fn::Join:
+            - ""
+            -
+              - "group1-AutoscalingGroup-"
+      -
+        Key: "Email"
+        PropagateAtLaunch : True
+        Value: "any@quantiphi.com"
+      -
+        Key: "Project"
+        PropagateAtLaunch : True
+        Value: "PE-TRAINING"
+
+
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 0
+        MaxBatchSize: '1'
+        PauseTime: PT15M
+        WaitOnResourceSignals: 'true'
+
+ #  ################ Autoscaling policy for scaleup ####################
+  WebServerScaleUpPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName:
+        Ref: WebServerGroup
+      Cooldown: '60'
+      ScalingAdjustment: '1'
+
+ # ################ Autoscaling policy for scaledown ####################
+  WebServerScaleDownPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName:
+        Ref: WebServerGroup
+      Cooldown: '60'
+      ScalingAdjustment: "-1"
+
+
+  ################ Loadbalancer ####################
+  ElasticLoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      CrossZone: 'true'
+      Listeners:
+      - LoadBalancerPort: '80'
+        InstancePort: '80'
+        Protocol: HTTP
+      HealthCheck:
+        Target: HTTP:80/
+        HealthyThreshold: '3'
+        UnhealthyThreshold: '5'
+        Interval: '30'
+        Timeout: '5'
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+
+      SecurityGroups:
+      - Ref: LBsecuritygroup
+      Tags:
+        -
+          Key: "Name"
+          Value: "g1-Loadbalancer"
+        -
+          Key: "Email"
+          Value: "any@quantiphi.com"
+        -
+          Key: "Project"
+          Value: "PE-TRAINING"
+
+
+  ################ Security Group for load balancer####################
+  LBsecuritygroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow all inbound traffic on the load balancer listener port
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp: 0.0.0.0/0
+      VpcId: !Ref VPC
+      Tags:
+        -
+          Key: "Name"
+          Value: "group1-LBSecurityGroup"
+        -
+          Key: "Email"
+          Value: "any@quantiphi.com"
+        -
+          Key: "Project"
+          Value: "PE-TRAINING"
+
+
+  #THIS IS FOR ASG
+  ServerInstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName : ServerEC2SG
+      GroupDescription: Enable HTTPS and HTTP from the load balancer only
+      VpcId: !Ref VPC
+      Tags:
+        -
+          Key: "Name"
+          Value: "group1-ServerSecurityGroup"
+        -
+          Key: "Email"
+          Value: "any@quantiphi.com"
+        -
+          Key: "Project"
+          Value: "PE-TRAINING"
+
+  DBInstanceSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+          GroupName : ServerRDSSG
+          GroupDescription: Security Group for the RDS Instance
+          VpcId: !Ref VPC
+          Tags:
+            -
+              Key: "Name"
+              Value: "group1-ServerSecurityGroup"
+            -
+              Key: "Email"
+              Value: "any@quantiphi.com"
+            -
+              Key: "Project"
+              Value: "PE-TRAINING"
+
+  UserInstanceSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+
+        Properties:
+          GroupName : UserEC2SG
+          GroupDescription: Security Group for the EC2
+          VpcId: !Ref VPC
+          Tags:
+            -
+              Key: "Name"
+              Value: "group1-ServerSecurityGroup"
+            -
+              Key: "Email"
+              Value: "any@quantiphi.com"
+            -
+              Key: "Project"
+              Value: "PE-TRAINING"
+
+  ################################ SG Rules #############################
+
+  ServerSGIngressHTTPS :
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allows HTTPS from Load Balancer
+      FromPort: 443
+      GroupId: !GetAtt [ServerInstanceSecurityGroup, GroupId]
+      IpProtocol: tcp
+      SourceSecurityGroupId: !Ref LBsecuritygroup
+      ToPort: 443
+
+  ServerSGIngressHTTP :
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allows HTTP from Load Balancer
+      FromPort: 80
+      GroupId: !GetAtt [ServerInstanceSecurityGroup, GroupId]
+      IpProtocol: tcp
+      SourceSecurityGroupId: !Ref LBsecuritygroup
+      ToPort: 80
+
+  ServerSGIngressSSH :
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allows SSH from Testing EC2
+      FromPort: 22
+      GroupId: !GetAtt [ServerInstanceSecurityGroup, GroupId]
+      IpProtocol: tcp
+      SourceSecurityGroupId: !Ref UserInstanceSecurityGroup
+      ToPort: 22
+
+  ServerSGEgressDBPort :
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      Description: Allows connection to RDS
+      FromPort: 3306
+      GroupId: !GetAtt [ServerInstanceSecurityGroup, GroupId]
+      IpProtocol: tcp
+      SourceSecurityGroupId: !Ref DBInstanceSecurityGroup
+      ToPort: 3306
+
+  ServerSGEgressHTTPS :
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      CidrIp : "0.0.0.0/0"
+      Description: Allows HTTPS to Internet
+      FromPort: 443
+      GroupId: !GetAtt [ServerInstanceSecurityGroup, GroupId]
+      IpProtocol: tcp
+      ToPort: 443
+
+  ServerSGEgressHTTP :
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      CidrIp : "0.0.0.0/0"
+      Description: Allows HTTP to Internet
+      FromPort: 80
+      GroupId: !GetAtt [ServerInstanceSecurityGroup, GroupId]
+      IpProtocol: tcp
+      ToPort: 80
+
+  RDSSGIngressUser :
+    Type: AWS::EC2::SecurityGroupIngress
+
+    Properties:
+      Description: Allows connection from Testing EC2
+      FromPort: 3306
+      GroupId: !GetAtt [DBInstanceSecurityGroup, GroupId]
+      IpProtocol: tcp
+      SourceSecurityGroupId: !Ref UserInstanceSecurityGroup
+      ToPort: 3306
+
+  UserSGEIngressSSH :
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allows connection from Server EC2
+      FromPort: 22
+      GroupId: !GetAtt [UserInstanceSecurityGroup, GroupId]
+      IpProtocol: tcp
+      SourceSecurityGroupId: !Ref UserInstanceSecurityGroup
+      ToPort: 22
+
+  UserSGEIngressHTTP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      CidrIp: 0.0.0.0/0
+      Description: Allows connection from Server EC2
+      FromPort: 80
+      GroupId: !GetAtt [UserInstanceSecurityGroup, GroupId]
+      IpProtocol: tcp
+      ToPort: 80
+
+  UserSGEgressSSH :
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      Description: Allows SSH to server EC2
+      FromPort: 22
+      DestinationSecurityGroupId: !GetAtt [ServerInstanceSecurityGroup, GroupId]
+      IpProtocol: tcp
+      GroupId: !GetAtt [UserInstanceSecurityGroup, GroupId]
+      ToPort: 22
+
+  UserSGEgressDBPort :
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      Description: Allows connection to RDS
+      FromPort: 3306
+      GroupId: !GetAtt [UserInstanceSecurityGroup, GroupId]
+      IpProtocol: tcp
+      #SourceSecurityGroupId: !Ref DBInstanceSecurityGroup
+      DestinationSecurityGroupId: !Ref DBInstanceSecurityGroup
+      ToPort: 3306
+
+  UserSGEgressAllTrafic :
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      Description: Allows all traffic
+      CidrIp: "0.0.0.0/0"
+      FromPort: 0
+      ToPort: 65535
+      GroupId: !GetAtt [UserInstanceSecurityGroup, GroupId]
+      IpProtocol: tcp
+
+  # ################ Cloudwatch alarm for scaleup ####################
+  CPUAlarmHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Scale-up if CPU > 90% for 10 minutes
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: '300'
+      EvaluationPeriods: '2'
+      Threshold: '90'
+      AlarmActions:
+      - Ref: WebServerScaleUpPolicy
+      Dimensions:
+      - Name: AutoScalingGroupName
+        Value:
+          Ref: WebServerGroup
+      ComparisonOperator: GreaterThanThreshold
+
+  # ################ Cloudwatch alarm for scaledown ####################
+  CPUAlarmLow:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Scale-down if CPU < 70% for 10 minutes
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: '300'
+      EvaluationPeriods: '2'
+      Threshold: '70'
+      AlarmActions:
+      - Ref: WebServerScaleDownPolicy
+      Dimensions:
+      - Name: AutoScalingGroupName
+        Value:
+          Ref: WebServerGroup
+      ComparisonOperator: LessThanThreshold
+
+################ Outputs ####################
+Outputs:
+  URL:
+    Description: Link to the E-prescription Portal
+    Value:
+      Fn::Join:
+      - ''
+      - - http://
+        - Fn::GetAtt:
+          - ElasticLoadBalancer
+          - DNSName
